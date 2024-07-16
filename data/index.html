@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filter Status</title>
+    <link rel="stylesheet" href="style.css">
+    <script>
+        function setCurrentDateTime() {
+            var now = new Date();
+            var year = now.getFullYear();
+            var month = (now.getMonth() + 1).toString().padStart(2, '0');
+            var day = now.getDate().toString().padStart(2, '0');
+            var hours = now.getHours().toString().padStart(2, '0');
+            var minutes = now.getMinutes().toString().padStart(2, '0');
+            var seconds = now.getSeconds().toString().padStart(2, '0');
+            var formattedDateTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            document.getElementById('date').value = formattedDateTime;
+        }
+
+        function fetchData() {
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('totalLitres').innerText = data.totalLitres;
+                    document.getElementById('lastReset').innerText = data.lastReset;
+                    document.getElementById('carbonTotal').innerText = data.carbonTotal;
+                    document.getElementById('carbonChanged').innerText = data.carbonChanged;
+                    document.getElementById('carbonRemaining').innerText = data.carbonRemaining;
+                    document.getElementById('kdfgacTotal').innerText = data.kdfgacTotal;
+                    document.getElementById('kdfgacChanged').innerText = data.kdfgacChanged;
+                    document.getElementById('kdfgacRemaining').innerText = data.kdfgacRemaining;
+                    document.getElementById('ceramicTotal').innerText = data.ceramicTotal;
+                    document.getElementById('ceramicChanged').innerText = data.ceramicChanged;
+                    document.getElementById('ceramicRemaining').innerText = data.ceramicRemaining;
+                });
+        }
+
+        window.onload = function() {
+            setCurrentDateTime();
+            fetchData();
+        };
+    </script>
+</head>
+<body>
+    <h1>Filter Status</h1>
+    <h2>Total Data</h2>
+    <p>All Time Litres: <span id="totalLitres"></span> L</p>
+    <p>Last Full Reset: <span id="lastReset"></span></p>
+
+    <h2>Reset Filters</h2>
+    <form action="/reset" method="post">
+        <label for="filter">Select Filter:</label><br>
+        <select id="filter" name="filter">
+            <option value="carbon">Carbon Filter</option>
+            <option value="kdfgac">KDF/GAC Filter</option>
+            <option value="ceramic">Ceramic Filter</option>
+            <option value="full">Full Reset</option>
+        </select><br><br>
+        <label for="date">Reset Date (YYYY-MM-DD HH:MM:SS):</label><br>
+        <input type="text" id="date" name="date"><br><br>
+        <input type="submit" value="Reset">
+    </form><br><br>
+
+    <h2>Carbon Filter</h2>
+    <p>Total Litres: <span id="carbonTotal"></span> L</p>
+    <p>Last Changed: <span id="carbonChanged"></span></p>
+    <p>Remaining: <span id="carbonRemaining"></span></p>
+
+    <h2>KDF/GAC Filter</h2>
+    <p>Total Litres: <span id="kdfgacTotal"></span> L</p>
+    <p>Last Changed: <span id="kdfgacChanged"></span></p>
+    <p>Remaining: <span id="kdfgacRemaining"></span></p>
+
+    <h2>Ceramic Filter</h2>
+    <p>Total Litres: <span id="ceramicTotal"></span> L</p>
+    <p>Last Changed: <span id="ceramicChanged"></span></p>
+    <p>Remaining: <span id="ceramicRemaining"></span></p>
+</body>
+</html>

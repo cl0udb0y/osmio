@@ -1,0 +1,6 @@
+ConnectedIP address: 172.16.44.142Ready
+IP address: 172.16.44.142
+CalibrationActive: 0
+Calibration Factor: 0.30
+Message arrived in topic: home/ESP-49A0B1/lastvalue
+Message:{"ID":"ESP-49A0B1","Totalvolume":55748.03125}

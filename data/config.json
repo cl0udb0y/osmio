@@ -1,0 +1,19 @@
+{
+    "sensors": [
+      {
+        "name": "YF-G1",
+        "calibrationFactor": 64.8,
+        "kFactor": 1.08
+      },
+      {
+        "name": "FS300A",
+        "calibrationFactor": 73.0,
+        "kFactor": 1.0
+      },
+      {
+        "name": "FS400",
+        "calibrationFactor": 80.0,
+        "kFactor": 1.0
+      }
+    ]
+  }
