@@ -23,6 +23,7 @@
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('totalLitres').innerText = data.totalLitres;
+                    document.getElementById('flowrate').innerText = data.flowrate;
                     document.getElementById('lastReset').innerText = data.lastReset;
                     document.getElementById('carbonTotal').innerText = data.carbonTotal;
                     document.getElementById('carbonChanged').innerText = data.carbonChanged;
@@ -39,6 +40,7 @@
         window.onload = function() {
             setCurrentDateTime();
             fetchData();
+            setInterval(fetchData, 1000); // Update every second
         };
     </script>
 </head>
@@ -46,6 +48,7 @@
     <h1>Filter Status</h1>
     <h2>Total Data</h2>
     <p>All Time Litres: <span id="totalLitres"></span> L</p>
+    <p>Flow Rate: <span id="flowrate"></span> L/min</p>
     <p>Last Full Reset: <span id="lastReset"></span></p>
 
     <h2>Reset Filters</h2>

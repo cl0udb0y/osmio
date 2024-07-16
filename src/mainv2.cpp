@@ -229,12 +229,44 @@ void setup()
         json += "}";
         request->send(200, "application/json", json); });
 
+    // Define server routes
+    server.on("/", handleRoot);
+    server.on("/data", handleData);
+
     server.begin();
     oldTime = millis(); // Initialize oldTime at the beginning
 }
 
+void handleRoot()
+{
+    server.send(200, "text/html", "<html><body><h1>ESP8266 Web Server</h1><div id=\"sensorData\">Loading...</div><script>function getSensorData() {var xhttp = new XMLHttpRequest();xhttp.onreadystatechange = function() {if (this.readyState == 4 && this.status == 200) {document.getElementById(\"sensorData\").innerHTML = this.responseText;}};xhttp.open(\"GET\", \"sensor\", true);xhttp.send();} setInterval(getSensorData, 1000);</script></body></html>");
+}
+
+void handleData()
+{
+    StaticJsonDocument<200> doc;
+    doc["totalLitres"] = totalLitres;
+    doc["flowrate"] = flowrate;
+    doc["lastReset"] = "2023-01-01 12:00:00"; // Example value
+    doc["carbonTotal"] = 50.0;                // Example value
+    doc["carbonChanged"] = "2023-02-01";      // Example value
+    doc["carbonRemaining"] = 200.0;           // Example value
+    doc["kdfgacTotal"] = 100.0;               // Example value
+    doc["kdfgacChanged"] = "2023-03-01";      // Example value
+    doc["kdfgacRemaining"] = 150.0;           // Example value
+    doc["ceramicTotal"] = 75.0;               // Example value
+    doc["ceramicChanged"] = "2023-04-01";     // Example value
+    doc["ceramicRemaining"] = 125.0;          // Example value
+
+    String jsonResponse;
+    serializeJson(doc, jsonResponse);
+    server.send(200, "application/json", jsonResponse);
+}
+
 void loop()
 {
+    server.handleClient();
+
     if (!client.connected())
     {
         reconnect();
@@ -268,6 +300,7 @@ void loop()
 
 void calculateFlow()
 {
+
     // Volume based on pulse count (your original calculation)
     float litresThisPeriod = (pulseCount / calibrationFactor) * kFactor;
     // Check for NaN before updating totalData
