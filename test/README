@@ -69,17 +69,13 @@ Create a `config.json` file in the `data` directory with the following content:
 
 ## Upload Filesystem
 Upload the LittleFS filesystem to the ESP8266:
-
 ```bash
-Copy code
 pio run --target uploadfs
-Upload Firmware
 ```
-## Upload the firmware to the ESP8266:
+
+## Upload Firmware
 ```bash
-Copy code
 pio run --target upload
-Usage
 ```
 ## Web Interface
 Access the web interface by navigating to the IP address of the ESP8266 in a web browser. The web interface displays filter status and allows resetting filter data.
@@ -89,21 +85,16 @@ The system publishes data to an MQTT server. Configure the MQTT server in the co
 
 ## Code Overview
 
-main.cpp∂
+main.cpp
 The main code file where the core functionality is implemented:
 
 Setup Function: Initializes the system, sets up Wi-Fi, and loads configuration.
 Loop Function: Handles the main logic, including flow calculation and data publishing.
 ISR Function: pulseCounter counts pulses from the flow sensor.
 Helper Functions: Various functions for handling EEPROM, configuration, and data calculations.
-config.json
-Configuration file for sensor calibration and correction factors.
-
-index.html
-Web interface for displaying data and resetting filters.
-
-style.css
-Stylesheet for the web interface.
+config.json: Configuration file for sensor calibration and correction factors.
+index.html: Web interface for displaying data and resetting filters.
+style.css: Stylesheet for the web interface.
 
 ## Contributing
 
