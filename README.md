@@ -110,3 +110,4 @@ PlatformIO
 ArduinoJson
 ESPAsyncWebServer
 LittleFS
+YF-G1 https://gb.lightmalls.com/yf-g1-plastic-water-flow-dn25-hall-sensor-flowmeter-counter-black?gad_source=1&gbraid=0AAAAADt5-bJjC6fGgppMviggf0I_WqVJh&gclid=EAIaIQobChMIsbegnIGqhwMVRZRQBh2zzgyrEAQYBCABEgK9i_D_BwE

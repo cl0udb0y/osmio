@@ -91,6 +91,17 @@ void updateTimestamp(char *buffer, size_t bufferSize)
     strftime(buffer, bufferSize, "%Y-%m-%d %H:%M:%S", tm);
 }
 
+String formatValue(float value) {
+    if (value >= 1000000) {
+        return String(value / 1000000, 2) + "M";
+    } else if (value >= 1000) {
+        return String(value / 1000, 2) + "k";
+    } else {
+        return String(value, 2);
+    }
+}
+
+
 void setup()
 {
     Serial.begin(115200);
@@ -112,8 +123,6 @@ void setup()
     timeClient.begin();
 
     initializeEEPROM();
-    // Ensure totalData is initialized to zero
-    totalData.allTimeLitres = 0.0;
     loadFilterData(CARBON_FILTER_ADDRESS, carbonFilter);
     loadFilterData(KDF_GAC_FILTER_ADDRESS, kdfGacFilter);
     loadFilterData(CERAMIC_FILTER_ADDRESS, ceramicFilter);
@@ -130,6 +139,31 @@ void setup()
     // Serve static files
     server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 
+    // Handle data requests
+    server.on("/data", HTTP_GET, [](AsyncWebServerRequest *request)
+              {
+
+        JsonDocument doc;
+        doc["totalLitres"] = formatValue(totalData.allTimeLitres);
+        doc["flowrate"] = formatValue(pulseCount / kFactor); // Example flow rate calculation
+        doc["lastReset"] = totalData.lastReset;
+        doc["carbonTotal"] = formatValue(carbonFilter.processedLitres);
+        doc["carbonChanged"] = carbonFilter.lastChanged;
+        doc["carbonRemaining"] = formatValue(carbonFilter.remainingLitres);
+        doc["carbonRemainingDays"] = carbonFilter.remainingDays;
+        doc["kdfgacTotal"] = formatValue(kdfGacFilter.processedLitres);
+        doc["kdfgacChanged"] = kdfGacFilter.lastChanged;
+        doc["kdfgacRemaining"] = formatValue(kdfGacFilter.remainingLitres);
+        doc["kdfgacRemainingDays"] = kdfGacFilter.remainingDays;
+        doc["ceramicTotal"] = formatValue(ceramicFilter.processedLitres);
+        doc["ceramicChanged"] = ceramicFilter.lastChanged;
+        doc["ceramicRemaining"] = formatValue(ceramicFilter.remainingLitres);
+        doc["ceramicRemainingDays"] = ceramicFilter.remainingDays;
+        String jsonResponse;
+        serializeJson(doc, jsonResponse);
+        request->send(200, "application/json", jsonResponse); });
+
+    // Handle form submission for reset
     server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request)
               {
         String filterType;
@@ -212,61 +246,12 @@ void setup()
         // Redirect back to the main page
         request->send(200, "text/html", "<html><body><h1>Reset Completed</h1><a href=\"/\">Back to Home</a></body></html>"); });
 
-    server.on("/data", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-        String json = "{";
-        json += "\"totalLitres\":" + String(totalData.allTimeLitres, 2) + ",";
-        json += "\"lastReset\":\"" + String(totalData.lastReset) + "\",";
-        json += "\"carbonTotal\":" + String(carbonFilter.processedLitres, 2) + ",";
-        json += "\"carbonChanged\":\"" + String(carbonFilter.lastChanged) + "\",";
-        json += "\"carbonRemaining\":\"" + String(carbonFilter.remainingLitres) + " L / " + String(carbonFilter.remainingDays) + " days\",";
-        json += "\"kdfgacTotal\":" + String(kdfGacFilter.processedLitres, 2) + ",";
-        json += "\"kdfgacChanged\":\"" + String(kdfGacFilter.lastChanged) + "\",";
-        json += "\"kdfgacRemaining\":\"" + String(kdfGacFilter.remainingLitres) + " L / " + String(kdfGacFilter.remainingDays) + " days\",";
-        json += "\"ceramicTotal\":" + String(ceramicFilter.processedLitres, 2) + ",";
-        json += "\"ceramicChanged\":\"" + String(ceramicFilter.lastChanged) + "\",";
-        json += "\"ceramicRemaining\":\"" + String(ceramicFilter.remainingLitres) + " L / " + String(ceramicFilter.remainingDays) + " days\"";
-        json += "}";
-        request->send(200, "application/json", json); });
-
-    // Define server routes
-    server.on("/", handleRoot);
-    server.on("/data", handleData);
-
     server.begin();
     oldTime = millis(); // Initialize oldTime at the beginning
 }
 
-void handleRoot()
-{
-    server.send(200, "text/html", "<html><body><h1>ESP8266 Web Server</h1><div id=\"sensorData\">Loading...</div><script>function getSensorData() {var xhttp = new XMLHttpRequest();xhttp.onreadystatechange = function() {if (this.readyState == 4 && this.status == 200) {document.getElementById(\"sensorData\").innerHTML = this.responseText;}};xhttp.open(\"GET\", \"sensor\", true);xhttp.send();} setInterval(getSensorData, 1000);</script></body></html>");
-}
-
-void handleData()
-{
-    StaticJsonDocument<200> doc;
-    doc["totalLitres"] = totalLitres;
-    doc["flowrate"] = flowrate;
-    doc["lastReset"] = "2023-01-01 12:00:00"; // Example value
-    doc["carbonTotal"] = 50.0;                // Example value
-    doc["carbonChanged"] = "2023-02-01";      // Example value
-    doc["carbonRemaining"] = 200.0;           // Example value
-    doc["kdfgacTotal"] = 100.0;               // Example value
-    doc["kdfgacChanged"] = "2023-03-01";      // Example value
-    doc["kdfgacRemaining"] = 150.0;           // Example value
-    doc["ceramicTotal"] = 75.0;               // Example value
-    doc["ceramicChanged"] = "2023-04-01";     // Example value
-    doc["ceramicRemaining"] = 125.0;          // Example value
-
-    String jsonResponse;
-    serializeJson(doc, jsonResponse);
-    server.send(200, "application/json", jsonResponse);
-}
-
 void loop()
 {
-    server.handleClient();
-
     if (!client.connected())
     {
         reconnect();
@@ -275,7 +260,6 @@ void loop()
     timeClient.update();
 
     unsigned long currentTime = millis();
-    static unsigned long oldTime = 0;
     unsigned long elapsedTime = currentTime - oldTime;
 
     if (elapsedTime >= 1000)
@@ -289,18 +273,10 @@ void loop()
 
         attachInterrupt(digitalPinToInterrupt(FLOW_SENSOR_PIN), pulseCounter, FALLING);
     }
-
-    unsigned long currentMillis = millis();
-    if (currentMillis - lastPublishTime > PUBLISH_INTERVAL)
-    {
-        publishUsage();
-        lastPublishTime = currentMillis;
-    }
 }
 
 void calculateFlow()
 {
-
     // Volume based on pulse count (your original calculation)
     float litresThisPeriod = (pulseCount / calibrationFactor) * kFactor;
     // Check for NaN before updating totalData
@@ -323,26 +299,6 @@ void calculateFlow()
     // Calculate flow rate (combine both methods)
     float flowRate = pulseFrequency / kFactor; // Frequency-based calculation
 
-    // Volume based on pulse count
-    float volumePulseCount = (float)pulseCount / calibrationFactor;
-
-    // Volume based on frequency
-    float volumeFrequency = flowRate * (elapsedTime / 60000.0);
-
-    // Calculate difference
-    float volumeDifference = volumePulseCount - volumeFrequency;
-    float percentageDifference = (volumeDifference / volumePulseCount) * 100.0;
-    /*
-        Serial.print("Volume (Pulse): ");
-        Serial.print(volumePulseCount);
-        Serial.print(" L, Volume (Freq): ");
-        Serial.print(volumeFrequency);
-        Serial.print(" L, Difference: ");
-        Serial.print(volumeDifference);
-        Serial.print(" L, Percentage Difference: ");
-        Serial.print(percentageDifference);
-        Serial.println(" %");
-    */
     // Check for no flow detection
     if (currentTime - lastPulseTime > NO_FLOW_TIMEOUT)
     {
@@ -355,17 +311,16 @@ void calculateFlow()
 
     if (flowDetected)
     {
-        /*
-                Serial.print("Flow rate: ");
-                Serial.print(flowRate);
-                Serial.print(" L/min\t");
-                Serial.print("Total Volume: ");
-                Serial.print(totalData.allTimeLitres);
-                Serial.print(" L\t");
-                Serial.print("Pulse Frequency: ");
-                Serial.print(pulseFrequency);
-                Serial.println(" Hz\t");
-        */
+        /*   Serial.print("Flow rate: ");
+           Serial.print(flowRate);
+           Serial.print(" L/min\t");
+           Serial.print("Total Volume: ");
+           Serial.print(totalData.allTimeLitres);
+           Serial.print(" L\t");
+           Serial.print("Pulse Frequency: ");
+           Serial.print(pulseFrequency);
+           Serial.println(" Hz\t");
+      */
     }
 
     // Calculate processedLitres for each filter
@@ -378,6 +333,8 @@ void calculateFlow()
     saveFilterData(KDF_GAC_FILTER_ADDRESS, kdfGacFilter);
     saveFilterData(CERAMIC_FILTER_ADDRESS, ceramicFilter);
     saveTotalData(TOTAL_LITRES_ADDRESS, totalData);
+    publishUsage();
+    publishAllTimeData();
 }
 
 bool reconnect()
@@ -697,13 +654,36 @@ bool loadConfig(const char *filename, const char *sensorName)
     return false;
 }
 
-void calculateRemainingLifespan(FilterData &data, float maxLitres, unsigned long maxDays)
-{
+void calculateRemainingLifespan(FilterData &data, float maxLitres, unsigned long maxDays) {
+    // Calculate the days since the filter was last changed
     unsigned long currentTime = timeClient.getEpochTime();
-    unsigned long daysPassed = (currentTime - data.lastChangedTimestamp) / 86400; // seconds in a day
-    unsigned long remainingDays = (maxDays > daysPassed) ? (maxDays - daysPassed) : 0;
+    unsigned long daysSinceChanged = (currentTime - data.lastChangedTimestamp) / 86400;
 
-    float remainingLitres = maxLitres - data.processedLitres;
-    data.remainingDays = remainingDays;
-    data.remainingLitres = remainingLitres;
+    // Infer processed litres if no litres have been recorded yet and days have passed
+    if (data.processedLitres == 0 && daysSinceChanged > 0) {
+        float dailyUsage = maxLitres / maxDays;
+        data.processedLitres = daysSinceChanged * dailyUsage;
+    }
+
+    // Ensure that processed litres continue to accumulate correctly
+    // This assumes `data.processedLitres` is being updated correctly elsewhere in the code
+
+    // Calculate the remaining litres and days
+    data.remainingLitres = maxLitres - data.processedLitres;
+    if (data.remainingLitres < 0) {
+        data.remainingLitres = 0; // Ensure remaining litres do not go negative
+    }
+
+    data.remainingDays = (maxDays > daysSinceChanged) ? (maxDays - daysSinceChanged) : 0;
+
+    // Debug statements
+  /*  Serial.print("Current time: "); Serial.println(currentTime);
+    Serial.print("Last changed timestamp: "); Serial.println(data.lastChangedTimestamp);
+    Serial.print("Days since changed: "); Serial.println(daysSinceChanged);
+    Serial.print("Processed litres: "); Serial.println(data.processedLitres);
+    Serial.print("Remaining litres: "); Serial.println(data.remainingLitres);
+    Serial.print("Remaining days: "); Serial.println(data.remainingDays);
+    */
 }
+
+
